@@ -19,5 +19,10 @@ grafana/data/
 # OS
 .DS_Store
 
+# Camera screenshots (privacy)
+docs/screenshots/
+*.jpg
+*.jpeg
+
 # Node-RED
 nodered/.flows.json.backup
