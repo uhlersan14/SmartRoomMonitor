@@ -20,11 +20,17 @@ SCD40-Sensor misst CO₂, Temperatur und Luftfeuchtigkeit alle 30 Sekunden. Eine
 
 ```
 SCD40 (I2C, 30 s)
-   └─ collector.py  ──► SQLite ──► Grafana   (Port 3000)
-          │                  └──► Flask     (Port 5000, Config + CSV)
-          └─ RGB-LED (GPIO)
-   Node-RED (Port 1880) ──► E-Mail-Alert (SMTP)
+   └─ collector.py  ──► /var/lib/smartroom-data/smartroom.db
+                              ├─► Grafana :3000 ✅
+                              └─► Flask   :5000 ✅ (Config + CSV)
+   └─ RGB-LED (GPIO 17/27/22)
+   Pi Camera V2 (CSI) ──► rpicam-jpeg ✅ (MediaPipe-Integration in W9)
+   Node-RED (Port 1880) ──► E-Mail-Alert (SMTP) ⏳ W6
 ```
+
+**Live-Endpunkte (Pi auf 192.168.1.130 LAN / 192.168.1.131 WLAN):**
+- Flask Backend: http://192.168.1.130:5000
+- Grafana Dashboard: http://192.168.1.130:3000 (Login `admin`)
 
 ## Tech Stack
 
@@ -47,20 +53,25 @@ docs/        Verkabelung, Setup, Architektur
 
 ## Quickstart auf dem Pi
 
-Siehe [docs/setup.md](docs/setup.md). Kurzfassung:
+Siehe [docs/setup.md](docs/setup.md) für komplette Anleitung. Kurzfassung:
 
 ```bash
 git clone https://github.com/uhlersan14/SmartRoomMonitor.git ~/SmartRoomMonitor
 cd ~/SmartRoomMonitor
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-sqlite3 smartroom.db < database/schema.sql
+
+# DB ausserhalb /home/ wegen systemd ProtectHome=true (Grafana)
+sudo mkdir -p /var/lib/smartroom-data
+sudo chown $USER:grafana /var/lib/smartroom-data
+sqlite3 /var/lib/smartroom-data/smartroom.db < database/schema.sql
+ln -sf /var/lib/smartroom-data/smartroom.db ~/SmartRoomMonitor/smartroom.db
 
 # Test ohne Hardware
 python sensor/collector.py --mock --once
 
 # Mit echtem SCD40 (sobald verkabelt)
-i2cdetect -y 1   # 0x62 sichtbar?
+sudo i2cdetect -y 1   # 0x62 sichtbar?
 python sensor/collector.py --once
 ```
 
@@ -72,11 +83,25 @@ Siehe [docs/wiring.md](docs/wiring.md).
 
 | Komponente | Status |
 |------------|--------|
-| Raspberry Pi 4 (4 GB) | ✅ vorhanden |
-| Pi Camera Module V2 | ✅ erhalten |
-| SCD40 CO₂/T/RH Sensor | ⚠️ Pins müssen gelötet werden |
-| KY-016 RGB-LED Modul | ✅ einsatzbereit |
-| Jumper-Kabel (F-F) | ⏳ bestellt (Berrybase) |
+| Raspberry Pi 4 (4 GB) | ✅ Bookworm 64-bit, hostname `smartroom` |
+| Pi Camera Module V2 | ✅ Angeschlossen via CSI, getestet (`imx219`) |
+| SCD40 CO₂/T/RH Sensor | ⚠️ Pin-Header lose → Löten erforderlich |
+| KY-016 RGB-LED Modul | ✅ Pins vorgelötet, einsatzbereit |
+| Jumper-Kabel F-F | ⏳ Berrybase Set CHF 4.90 zu bestellen |
+
+## Software-Stand (03.05.2026)
+
+| Komponente | Status |
+|------------|--------|
+| Pi-Konfiguration (I2C, Camera) | ✅ Aktiviert |
+| Python venv + Dependencies | ✅ Installiert |
+| `collector.py` Mock-Modus | ✅ Schreibt SQLite |
+| SQLite-DB | ✅ 20+ Datenpunkte, Schema komplett |
+| Flask Backend (:5000) | ✅ Live, Threshold + CSV-Export |
+| Grafana 13.0.1 (:3000) | ✅ Installiert mit `frser-sqlite-datasource` Plugin |
+| Grafana Dashboard | ✅ 5 Panels live, Auto-Provisioning |
+| systemd-Service | 🟡 Service-Datei vorbereitet, Deployment offen |
+| Node-RED | ⏳ Geplant W6 |
 
 ## Abgabe
 
