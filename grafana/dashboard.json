@@ -1,0 +1,89 @@
+{
+  "title": "SmartRoomMonitor",
+  "tags": ["iot", "co2", "smartroom"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Aktuelle CO₂ ppm",
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ppm",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 800 },
+              { "color": "red", "value": 1200 }
+            ]
+          }
+        }
+      },
+      "options": { "colorMode": "background", "graphMode": "none" },
+      "targets": [
+        {
+          "queryType": "table",
+          "rawQueryText": "SELECT co2_ppm AS value FROM measurements ORDER BY timestamp DESC LIMIT 1",
+          "datasource": { "type": "frser-sqlite-datasource" }
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Temperatur °C",
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+      "fieldConfig": { "defaults": { "unit": "celsius" } },
+      "targets": [
+        {
+          "queryType": "table",
+          "rawQueryText": "SELECT temperature AS value FROM measurements ORDER BY timestamp DESC LIMIT 1"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Luftfeuchte %",
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
+      "fieldConfig": { "defaults": { "unit": "humidity" } },
+      "targets": [
+        {
+          "queryType": "table",
+          "rawQueryText": "SELECT humidity AS value FROM measurements ORDER BY timestamp DESC LIMIT 1"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "CO₂ Verlauf (ppm)",
+      "gridPos": { "x": 0, "y": 4, "w": 24, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "ppm" } },
+      "targets": [
+        {
+          "queryType": "time series",
+          "rawQueryText": "SELECT strftime('%s', timestamp) * 1000 AS time, co2_ppm AS value FROM measurements WHERE timestamp >= datetime('now', '-24 hours') ORDER BY timestamp"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Temperatur & Luftfeuchte",
+      "gridPos": { "x": 0, "y": 12, "w": 24, "h": 8 },
+      "targets": [
+        {
+          "queryType": "time series",
+          "rawQueryText": "SELECT strftime('%s', timestamp) * 1000 AS time, temperature AS temp_c, humidity AS rh_pct FROM measurements WHERE timestamp >= datetime('now', '-24 hours') ORDER BY timestamp"
+        }
+      ]
+    }
+  ]
+}
