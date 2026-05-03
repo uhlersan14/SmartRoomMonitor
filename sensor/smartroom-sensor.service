@@ -1,0 +1,15 @@
+[Unit]
+Description=SmartRoomMonitor SCD40 Collector
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/SmartRoomMonitor
+ExecStart=/home/pi/SmartRoomMonitor/.venv/bin/python /home/pi/SmartRoomMonitor/sensor/collector.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
