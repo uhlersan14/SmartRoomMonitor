@@ -1,4 +1,5 @@
-scd4x-i2c==1.0.0
+sensirion-i2c-scd
+sensirion-i2c-driver
 RPi.GPIO==0.7.1
 flask==3.0.3
 python-dotenv==1.0.1

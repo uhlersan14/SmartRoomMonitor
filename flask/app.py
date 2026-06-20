@@ -1,4 +1,4 @@
-"""Flask Backend: Grenzwerte konfigurieren + CSV-Export."""
+"""Flask Backend: Grenzwerte konfigurieren + CSV-Export + JSON-API fuer Node-RED."""
 from __future__ import annotations
 
 import csv
@@ -69,6 +69,32 @@ def save_thresholds():
             (warn, crit, datetime.utcnow().isoformat(timespec="seconds")),
         )
     return redirect(url_for("index"))
+
+
+@app.get("/api/latest")
+def api_latest():
+    """Letzter Messwert + Grenzwerte + Ampel-Status als JSON (fuer Node-RED)."""
+    with db() as conn:
+        m = conn.execute(
+            "SELECT timestamp, co2_ppm, temperature, humidity "
+            "FROM measurements ORDER BY id DESC LIMIT 1"
+        ).fetchone()
+        t = conn.execute("SELECT co2_warning, co2_critical FROM thresholds WHERE id=1").fetchone()
+    if not m:
+        return {"error": "no data"}, 404
+    warn = t["co2_warning"] if t else 800
+    crit = t["co2_critical"] if t else 1200
+    co2 = m["co2_ppm"]
+    status = "red" if co2 >= crit else "yellow" if co2 >= warn else "green"
+    return {
+        "timestamp": m["timestamp"],
+        "co2_ppm": co2,
+        "temperature": m["temperature"],
+        "humidity": m["humidity"],
+        "co2_warning": warn,
+        "co2_critical": crit,
+        "status": status,
+    }
 
 
 @app.get("/export.csv")

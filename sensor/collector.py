@@ -1,6 +1,7 @@
 """SmartRoomMonitor sensor collector.
 
-Liest SCD40 alle 30s, schreibt SQLite, steuert RGB-LED.
+Liest SCD40 alle 30s und schreibt SQLite.
+Die RGB-LED wird vom Node-RED-Flow gesteuert (nicht mehr hier).
 Mit --mock laufen ohne echte Hardware (Demo/Test).
 """
 from __future__ import annotations
@@ -13,8 +14,6 @@ import sqlite3
 import sys
 import time
 from pathlib import Path
-
-from led_controller import LedController
 
 LOG = logging.getLogger("collector")
 
@@ -65,12 +64,6 @@ def init_db(db_path: Path) -> None:
         conn.executescript(schema)
 
 
-def get_thresholds(db_path: Path) -> tuple[int, int]:
-    with sqlite3.connect(db_path) as conn:
-        row = conn.execute("SELECT co2_warning, co2_critical FROM thresholds WHERE id=1").fetchone()
-    return (row[0], row[1]) if row else (800, 1200)
-
-
 def insert_measurement(db_path: Path, co2: int, temp: float, hum: float) -> None:
     with sqlite3.connect(db_path) as conn:
         conn.execute(
@@ -88,7 +81,7 @@ def _stop(*_: object) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--mock", action="store_true", help="Mock-Sensor + Mock-LED ohne Hardware")
+    parser.add_argument("--mock", action="store_true", help="Mock-Sensor ohne Hardware")
     parser.add_argument("--db", type=Path, default=DEFAULT_DB)
     parser.add_argument("--interval", type=int, default=DEFAULT_INTERVAL_S)
     parser.add_argument("--once", action="store_true", help="Nur eine Messung schreiben und beenden")
@@ -100,19 +93,16 @@ def main() -> int:
     LOG.info("DB ready: %s", args.db)
 
     sensor = MockSensor() if args.mock else Scd40Sensor()
-    led = LedController(mock=args.mock)
-    LOG.info("Sensor=%s LED=%s", type(sensor).__name__, "mock" if args.mock else "gpio")
+    LOG.info("Sensor=%s", type(sensor).__name__)
 
     signal.signal(signal.SIGTERM, _stop)
     signal.signal(signal.SIGINT, _stop)
 
     try:
         while _running:
-            warn, crit = get_thresholds(args.db)
             co2, temp, hum = sensor.read()
             insert_measurement(args.db, co2, temp, hum)
-            color = led.update_by_co2(co2, warn, crit)
-            LOG.info("CO2=%d ppm  T=%.1f°C  RH=%.1f%%  led=%s", co2, temp, hum, color)
+            LOG.info("CO2=%d ppm  T=%.1f C  RH=%.1f %%", co2, temp, hum)
             if args.once:
                 break
             for _ in range(args.interval):
@@ -120,8 +110,6 @@ def main() -> int:
                     break
                 time.sleep(1)
     finally:
-        led.off()
-        led.cleanup()
         if hasattr(sensor, "close"):
             sensor.close()
     return 0

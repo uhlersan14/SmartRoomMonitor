@@ -1,5 +1,15 @@
-"""KY-016 RGB LED Controller (common cathode)."""
+"""KY-016 RGB LED Controller (common cathode).
+
+Wird vom Node-RED-Flow per CLI aufgerufen:
+    python led_controller.py --set red|yellow|green|off
+
+WICHTIG: Im --set-Modus wird KEIN GPIO.cleanup() aufgerufen, damit der
+gesetzte Output-Zustand (Farbe) nach Skriptende erhalten bleibt.
+"""
 from __future__ import annotations
+
+import argparse
+import sys
 
 try:
     import RPi.GPIO as GPIO
@@ -11,6 +21,13 @@ PIN_RED = 17
 PIN_GREEN = 27
 PIN_BLUE = 22
 
+COLORS = {
+    "green": (False, True, False),
+    "yellow": (True, True, False),
+    "red": (True, False, False),
+    "off": (False, False, False),
+}
+
 
 class LedController:
     def __init__(self, mock: bool = False) -> None:
@@ -20,7 +37,7 @@ class LedController:
         GPIO.setmode(GPIO.BCM)
         GPIO.setwarnings(False)
         for pin in (PIN_RED, PIN_GREEN, PIN_BLUE):
-            GPIO.setup(pin, GPIO.OUT, initial=GPIO.LOW)
+            GPIO.setup(pin, GPIO.OUT)
 
     def set_color(self, red: bool, green: bool, blue: bool) -> None:
         if self.mock:
@@ -30,17 +47,20 @@ class LedController:
         GPIO.output(PIN_GREEN, GPIO.HIGH if green else GPIO.LOW)
         GPIO.output(PIN_BLUE, GPIO.HIGH if blue else GPIO.LOW)
 
+    def set_named(self, name: str) -> None:
+        self.set_color(*COLORS[name])
+
     def green(self) -> None:
-        self.set_color(False, True, False)
+        self.set_named("green")
 
     def yellow(self) -> None:
-        self.set_color(True, True, False)
+        self.set_named("yellow")
 
     def red(self) -> None:
-        self.set_color(True, False, False)
+        self.set_named("red")
 
     def off(self) -> None:
-        self.set_color(False, False, False)
+        self.set_named("off")
 
     def update_by_co2(self, co2_ppm: int, warn: int = 800, crit: int = 1200) -> str:
         if co2_ppm >= crit:
@@ -58,14 +78,36 @@ class LedController:
         GPIO.cleanup()
 
 
+def main() -> int:
+    parser = argparse.ArgumentParser(description="KY-016 RGB-LED steuern")
+    parser.add_argument("--set", dest="color", choices=list(COLORS),
+                        help="LED auf Farbe setzen (Zustand bleibt erhalten)")
+    parser.add_argument("--demo", action="store_true", help="Farb-Durchlauf zum Testen")
+    parser.add_argument("--mock", action="store_true")
+    args = parser.parse_args()
+
+    led = LedController(mock=args.mock)
+
+    if args.color:
+        # KEIN cleanup() -> Pin-Zustand bleibt nach Skriptende erhalten
+        led.set_named(args.color)
+        return 0
+
+    if args.demo:
+        import time
+        try:
+            for _ in range(2):
+                led.green(); time.sleep(0.5)
+                led.yellow(); time.sleep(0.5)
+                led.red(); time.sleep(0.5)
+            led.off()
+        finally:
+            led.cleanup()
+        return 0
+
+    parser.print_help()
+    return 1
+
+
 if __name__ == "__main__":
-    import time
-    led = LedController()
-    try:
-        for _ in range(2):
-            led.green(); time.sleep(0.5)
-            led.yellow(); time.sleep(0.5)
-            led.red(); time.sleep(0.5)
-        led.off()
-    finally:
-        led.cleanup()
+    sys.exit(main())
