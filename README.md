@@ -107,7 +107,7 @@ Siehe [docs/wiring.md](docs/wiring.md). Wichtig: Module brauchen **Female-Female
 | Flask Backend (:5000) | ✅ Threshold + CSV-Export + /api/latest |
 | Grafana 13.0.1 (:3000) | ✅ 5 Panels, Auto-Provisioning |
 | Node-RED (:1880) | ✅ Flow: LED-Steuerung + E-Mail-Alert |
-| systemd-Service (Sensor) | \U0001f7e1 Service-Datei vorhanden, Deployment nach Verkabelung |
+| systemd-Service (Sensor) | 🟡 Service-Datei vorhanden, Deployment nach Verkabelung |
 
 ## Offen bis zur Abgabe
 
@@ -118,4 +118,4 @@ Siehe [docs/wiring.md](docs/wiring.md). Wichtig: Module brauchen **Female-Female
 
 ## Abgabe
 
-28. Juni 2026, 23:59 Uhr (GitHub-Repo + Präsentation)
+28. Juni 2026, 23:59 Uhr (GitHub-Präsentation)
