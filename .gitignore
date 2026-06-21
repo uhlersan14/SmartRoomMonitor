@@ -1,28 +1,15 @@
-# Environment
-.env
-*.env
-
 # Python
 __pycache__/
-*.pyc
-*.pyo
-venv/
+*.py[cod]
 .venv/
+venv/
 
-# SQLite
-*.db
-*.sqlite
+# SQLite-Datenbank (Laufzeitdaten)
+smartroom.db
+*.db-journal
 
-# Grafana
-grafana/data/
+# Secrets (Telegram-Token etc.) - NIE committen
+.env
 
 # OS
 .DS_Store
-
-# Camera screenshots (privacy)
-docs/screenshots/
-*.jpg
-*.jpeg
-
-# Node-RED
-nodered/.flows.json.backup
