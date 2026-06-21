@@ -3,61 +3,68 @@
 IoT-Raumluftüberwachung auf Raspberry Pi 4 — ZHAW FS26
 Modul: w.BA.XX.2IoTData.XX.G — IoT Data Streaming & Analytics
 
+Vollständig lokales System (Privacy by Design, kein Cloud-Upload): Ein SCD40-Sensor misst CO₂, Temperatur und Luftfeuchtigkeit, eine RGB-LED signalisiert den Lüftungsbedarf, Grafana visualisiert die Daten, und bei kritischem CO₂ kommt ein Telegram-Alarm aufs Handy.
+
 ## Team
 
 | Person | Schwerpunkt |
 |--------|-------------|
-| Sandro | Projektleitung, Node-RED, Flask, Doku |
+| Sandro | Projektleitung, Backend/Automatisierung, Doku |
 | Sivanujan | Python Sensor-Skript, I2C, RGB-LED, systemd |
 | Alban | Grafana Dashboard, Analytics, SQLite-Plugin |
 | Jaden | SQLite Setup, CSV-Export, Testing, README |
 
 ## Funktion
 
-SCD40-Sensor misst CO₂, Temperatur und Luftfeuchtigkeit alle 30 Sekunden. Eine RGB-LED zeigt den Lüftungsbedarf an (grün < 800 ppm, gelb 800–1200 ppm, rot > 1200 ppm). Daten landen lokal in SQLite. Grafana visualisiert, **Node-RED steuert die LED und alarmiert per E-Mail**, ein Flask-Backend erlaubt das Konfigurieren der Schwellwerte und CSV-Export. Eine Pi-Camera zählt zusätzlich Personen im Raum (OpenCV/MediaPipe) für Korrelationsanalysen.
+Der **SCD40**-Sensor misst alle 30 Sekunden CO₂, Temperatur und Luftfeuchtigkeit. `collector.py`:
+
+1. schreibt jede Messung in **SQLite**,
+2. steuert die **RGB-LED** als Ampel (grün < 800 ppm, gelb 800–1200 ppm, rot > 1200 ppm),
+3. schickt bei **kritischem CO₂** einen **Telegram-Alarm** (mit Entwarnung, max. 1 Alarm / 30 min).
+
+**Grafana** zeigt Live-Werte und Verläufe, ein **Flask**-Backend erlaubt das Konfigurieren der Schwellwerte (ohne Neustart) und den CSV-Export. Die Grenzwerte liegen in der DB und werden vom Sensor jede Runde frisch gelesen.
 
 ## Datenpipeline
 
 ```
-SCD40 (I2C, 30 s)
-   └─ collector.py  ──► /var/lib/smartroom-data/smartroom.db
-                              ├─► Grafana :3000 ✅ (Visualisierung)
-                              └─► Flask   :5000 ✅ (Config + CSV + /api/latest)
+SCD40 (I2C, alle 30 s)
+   └─ collector.py ─┬─► /var/lib/smartroom-data/smartroom.db
+                    │         ├─► Grafana :3000  (Visualisierung)
+                    │         └─► Flask   :5000  (Grenzwerte + CSV-Export)
+                    ├─► RGB-LED (GPIO 17/27/22)  grün/gelb/rot
+                    └─► Telegram-Alarm  bei rot (Bot API)
 
-Node-RED :1880 ──► GET /api/latest (30 s)
-   ├─► RGB-LED (GPIO 17/27/22) via led_controller.py
-   └─► E-Mail-Alert (SMTP) bei rot, max. 1/30 min
-
-Pi Camera V2 (CSI) ──► rpicam-jpeg ✅ (MediaPipe-Integration in W9)
+Pi Camera V2 (CSI) ─► rpicam-jpeg  (Personenzählung via MediaPipe, optionales Feature)
 ```
 
-**Live-Endpunkte (Pi auf 192.168.1.130 LAN / 192.168.1.131 WLAN):**
-- Flask Backend: http://192.168.1.130:5000
-- Grafana Dashboard: http://192.168.1.130:3000 (Login `admin`)
-- Node-RED: http://192.168.1.130:1880
+**Live-Endpunkte** (Pi im WLAN `192.168.1.131`, Hostname `smartroom`):
+- Grafana Dashboard: http://smartroom.local:3000 (Login `admin`)
+- Flask Backend: http://smartroom.local:5000
 
 ## Tech Stack
 
-- Python 3 mit `sensirion-i2c-scd` (SCD40), `RPi.GPIO`, `Flask`
-- SQLite 3 lokal
-- Grafana mit `frser-sqlite-datasource` Plugin
-- Node-RED mit `node-red-node-email` für Steuerung + Alerting
-- systemd für Autostart
+- **Python 3** mit `sensirion-i2c-scd` (SCD40) + `RPi.GPIO` (LED) — Alerting via Telegram Bot API (`urllib`, keine Extra-Lib)
+- **SQLite 3** lokal
+- **Grafana** mit `frser-sqlite-datasource` Plugin
+- **Flask** für Konfiguration + CSV-Export
+- **systemd** für Autostart (Sensor + Flask)
+
+> **Alerting-Entscheid:** Statt Node-RED + E-Mail wird der Alarm direkt in `collector.py` per **Telegram** verschickt — weniger bewegliche Teile, robuster, und LED + Alarm reagieren im selben Mess-Loop. Node-RED ist laut Modulvorgaben nicht zwingend; der frühere Flow liegt als optionale Beilage unter `nodered/`.
 
 ## Repo-Struktur
 
 ```
-sensor/      Python-Skripte (collector.py, led_controller.py, .service)
+sensor/      collector.py (Sensor→DB, LED, Telegram), led_controller.py, .env.example, smartroom-sensor.service
 database/    SQLite-Schema
 flask/       Web-Backend (Grenzwerte + CSV-Export + /api/latest)
-grafana/     Dashboard-Export (JSON)
-nodered/     Flow-Export (flow.json) + Anleitung
+grafana/     Dashboard-Export (dashboard.json) + datasource.yaml
+nodered/     Optionaler Flow-Export (nicht im Live-Betrieb genutzt)
 docs/        Verkabelung, Setup, Architektur
 ```
 
 ## Quickstart auf dem Pi
 
-Siehe [docs/setup.md](docs/setup.md) und [nodered/README.md](nodered/README.md). Kurzfassung:
+Komplette Anleitung: [docs/setup.md](docs/setup.md). Kurzfassung:
 
 ```bash
 git clone https://github.com/uhlersan14/SmartRoomMonitor.git ~/SmartRoomMonitor
@@ -71,20 +78,42 @@ sudo chown $USER:grafana /var/lib/smartroom-data
 sqlite3 /var/lib/smartroom-data/smartroom.db < database/schema.sql
 ln -sf /var/lib/smartroom-data/smartroom.db ~/SmartRoomMonitor/smartroom.db
 
+# Telegram-Alert konfigurieren (Token von @BotFather)
+cp sensor/.env.example .env
+nano .env          # TELEGRAM_BOT_TOKEN und TELEGRAM_CHAT_ID eintragen
+
 # Test ohne Hardware
 python sensor/collector.py --mock --once
 
-# Mit echtem SCD40 (sobald verkabelt)
-sudo i2cdetect -y 1   # 0x62 sichtbar?
+# Mit echtem SCD40
+sudo i2cdetect -y 1            # Adresse 0x62 muss erscheinen
 python sensor/collector.py --once
 
-# LED manuell testen
-python sensor/led_controller.py --demo
+# Als Autostart-Service (Sensor + Flask)
+sudo cp sensor/smartroom-sensor.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now smartroom-sensor
 ```
+
+## Telegram-Alarm einrichten
+
+1. In Telegram **@BotFather** öffnen → `/newbot` → Token kopieren.
+2. Dem neuen Bot eine beliebige Nachricht schreiben.
+3. `chat_id` holen: `https://api.telegram.org/bot<TOKEN>/getUpdates` aufrufen → `chat.id` ablesen.
+4. Beides in `.env` eintragen (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`) und Sensor-Service neu starten.
+
+> Die `.env` mit den Credentials wird **nie committet** (siehe `.gitignore`). Vorlage: `sensor/.env.example`.
+
+**Demo:** Im Flask-Formular (`:5000`) die Grenzwerte kurz tief setzen (z.B. Warnung 500 / Kritisch 600) → LED wird rot + Telegram-Alarm. Oder einfach kurz an den Sensor atmen, dann steigt CO₂ real. Danach Grenzwerte zurück auf 800 / 1200.
 
 ## Verkabelung
 
 Siehe [docs/wiring.md](docs/wiring.md). Wichtig: Module brauchen **Female-Female** Jumper-Kabel (Pi-Header und Modul-Pins sind beide männlich).
+
+| Modul | Pin → Pi |
+|-------|----------|
+| SCD40 | VDD→1 (3.3 V), SDA→3, SCL→5, GND→6 (I2C `0x62`) |
+| KY-016 LED | R→11, G→13, B→15, GND→9 (GPIO 17/27/22) |
 
 ## Hardware
 
@@ -92,30 +121,25 @@ Siehe [docs/wiring.md](docs/wiring.md). Wichtig: Module brauchen **Female-Female
 |------------|--------|
 | Raspberry Pi 4 (4 GB) | ✅ Bookworm 64-bit, hostname `smartroom` |
 | Pi Camera Module V2 | ✅ Angeschlossen via CSI, getestet (`imx219`) |
-| SCD40 CO₂/T/RH Sensor | ✅ Pin-Header gelötet |
-| KY-016 RGB-LED Modul | ✅ Pins vorgelötet, einsatzbereit |
-| Jumper-Kabel F-F | ⏳ zu beschaffen (Pi ↔ Sensor/LED) |
+| SCD40 CO₂/T/RH Sensor | ✅ Gelötet, verkabelt, liefert Live-Daten |
+| KY-016 RGB-LED Modul | ✅ Verkabelt, Ampel funktioniert |
 
 ## Software-Stand
 
 | Komponente | Status |
 |------------|--------|
-| Pi-Konfiguration (I2C, Camera) | ✅ Aktiviert |
-| Python venv + Dependencies | ✅ Installiert |
-| `collector.py` Mock + echter SCD40-Pfad | ✅ |
-| SQLite-DB | ✅ Schema komplett |
-| Flask Backend (:5000) | ✅ Threshold + CSV-Export + /api/latest |
-| Grafana 13.0.1 (:3000) | ✅ 5 Panels, Auto-Provisioning |
-| Node-RED (:1880) | ✅ Flow: LED-Steuerung + E-Mail-Alert |
-| systemd-Service (Sensor) | 🟡 Service-Datei vorhanden, Deployment nach Verkabelung |
+| `collector.py` (Sensor → DB, LED, Telegram) | ✅ Live als systemd-Service |
+| SQLite-DB | ✅ Echte Messdaten alle 30 s |
+| Flask Backend (:5000) | ✅ Live als systemd-Service (Grenzwerte + CSV + /api/latest) |
+| Grafana (:3000) | ✅ Dashboard mit 5 Panels, echte Daten |
+| Telegram-Alarm | ✅ End-to-End getestet |
+| systemd Autostart | ✅ `smartroom-sensor` + `smartroom-flask` (überleben Reboot) |
 
-## Offen bis zur Abgabe
+## Bekannte Punkte / Ausblick
 
-- Sensor + LED physisch verkabeln (F-F-Kabel), `i2cdetect` → `0x62` prüfen
-- systemd-Service deployen (`sudo systemctl enable --now smartroom-sensor`)
-- Node-RED E-Mail-Credentials eintragen (siehe nodered/README.md)
-- End-to-End-Test: Sensor → DB → Grafana → Node-RED → LED + Mail
+- Der SCD40 liest die Temperatur leicht erhöht (Eigenerwärmung + Nähe zur Pi-Platine) — für genauere Werte den Sensor mit längeren Kabeln etwas abgesetzt platzieren oder einen Temperatur-Offset kalibrieren.
+- Optionale Erweiterungen: Personenzählung per Kamera (MediaPipe), Multi-Room via MQTT, Analytics-Dashboard.
 
 ## Abgabe
 
-28. Juni 2026, 23:59 Uhr (GitHub-Präsentation)
+28. Juni 2026, 23:59 Uhr (GitHub-Repository + Präsentation).
