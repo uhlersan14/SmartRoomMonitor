@@ -44,12 +44,19 @@ class Scd40Sensor:
         self._t = LinuxI2cTransceiver("/dev/i2c-1")
         self._t.__enter__()
         self._dev = Scd4xI2cDevice(I2cConnection(self._t))
+        # Falls ein frueherer Lauf noch im Messmodus haengt: erst stoppen.
+        try:
+            self._dev.stop_periodic_measurement()
+            time.sleep(1)
+        except Exception:
+            pass
         self._dev.start_periodic_measurement()
         time.sleep(5)
 
     def read(self) -> tuple[int, float, float]:
+        # read_measurement() liefert (Scd4xCarbonDioxide, Scd4xTemperature, Scd4xHumidity)
         co2, temp, hum = self._dev.read_measurement()
-        return int(co2), float(temp), float(hum)
+        return int(co2.co2), round(temp.degrees_celsius, 1), round(hum.percent_rh, 1)
 
     def close(self) -> None:
         try:
