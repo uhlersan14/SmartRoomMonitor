@@ -1,9 +1,10 @@
 {
+  "uid": "smartroom-main",
   "title": "SmartRoomMonitor",
   "tags": ["iot", "co2", "smartroom"],
   "timezone": "browser",
   "schemaVersion": 38,
-  "version": 2,
+  "version": 3,
   "refresh": "30s",
   "time": { "from": "now-6h", "to": "now" },
   "panels": [
@@ -76,7 +77,7 @@
         {
           "queryType": "time series",
           "timeColumns": ["time"],
-          "rawQueryText": "SELECT datetime(timestamp) AS time, co2_ppm AS \"CO2 ppm\" FROM measurements WHERE timestamp >= datetime('now', '-24 hours') ORDER BY timestamp",
+          "rawQueryText": "SELECT CAST(strftime('%s', timestamp) AS INTEGER) * 1000 AS time, co2_ppm AS \"CO2 ppm\" FROM measurements WHERE timestamp >= datetime('now', '-24 hours') ORDER BY timestamp",
           "datasource": { "type": "frser-sqlite-datasource", "uid": "P78F439AC9D5CFE20" }
         }
       ]
@@ -91,7 +92,7 @@
         {
           "queryType": "time series",
           "timeColumns": ["time"],
-          "rawQueryText": "SELECT datetime(timestamp) AS time, temperature AS \"Temp °C\", humidity AS \"Luftfeuchte %\" FROM measurements WHERE timestamp >= datetime('now', '-24 hours') ORDER BY timestamp",
+          "rawQueryText": "SELECT CAST(strftime('%s', timestamp) AS INTEGER) * 1000 AS time, temperature AS \"Temp °C\", humidity AS \"Luftfeuchte %\" FROM measurements WHERE timestamp >= datetime('now', '-24 hours') ORDER BY timestamp",
           "datasource": { "type": "frser-sqlite-datasource", "uid": "P78F439AC9D5CFE20" }
         }
       ]
