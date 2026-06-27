@@ -1,0 +1,14 @@
+[Unit]
+Description=SmartRoomMonitor Personenzaehlung (Kamera -> room_occupancy)
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/SmartRoomMonitor
+ExecStart=/usr/bin/python3 /home/pi/SmartRoomMonitor/occupancy/occupancy_counter.py --interval 60
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

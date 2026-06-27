@@ -1,38 +1,68 @@
 {
   "uid": "smartroom-main",
   "title": "SmartRoomMonitor",
-  "tags": ["iot", "co2", "smartroom"],
+  "tags": [
+    "iot",
+    "co2",
+    "smartroom"
+  ],
   "timezone": "browser",
   "schemaVersion": 38,
-  "version": 4,
+  "version": 5,
   "refresh": "30s",
-  "time": { "from": "now-6h", "to": "now" },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
   "panels": [
     {
       "id": 1,
       "type": "stat",
       "title": "Aktuelle CO₂ ppm",
-      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
-      "datasource": { "type": "frser-sqlite-datasource", "uid": "P78F439AC9D5CFE20" },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "P78F439AC9D5CFE20"
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "ppm",
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 800 },
-              { "color": "red", "value": 1200 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 800
+              },
+              {
+                "color": "red",
+                "value": 1200
+              }
             ]
           }
         }
       },
-      "options": { "colorMode": "background", "graphMode": "none" },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none"
+      },
       "targets": [
         {
           "queryType": "table",
           "rawQueryText": "SELECT co2_ppm AS value FROM measurements ORDER BY timestamp DESC LIMIT 1",
-          "datasource": { "type": "frser-sqlite-datasource", "uid": "P78F439AC9D5CFE20" }
+          "datasource": {
+            "type": "frser-sqlite-datasource",
+            "uid": "P78F439AC9D5CFE20"
+          }
         }
       ]
     },
@@ -40,14 +70,29 @@
       "id": 2,
       "type": "stat",
       "title": "Temperatur °C",
-      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
-      "datasource": { "type": "frser-sqlite-datasource", "uid": "P78F439AC9D5CFE20" },
-      "fieldConfig": { "defaults": { "unit": "celsius" } },
+      "gridPos": {
+        "x": 6,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "P78F439AC9D5CFE20"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius"
+        }
+      },
       "targets": [
         {
           "queryType": "table",
           "rawQueryText": "SELECT temperature AS value FROM measurements ORDER BY timestamp DESC LIMIT 1",
-          "datasource": { "type": "frser-sqlite-datasource", "uid": "P78F439AC9D5CFE20" }
+          "datasource": {
+            "type": "frser-sqlite-datasource",
+            "uid": "P78F439AC9D5CFE20"
+          }
         }
       ]
     },
@@ -55,14 +100,29 @@
       "id": 3,
       "type": "stat",
       "title": "Luftfeuchte %",
-      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
-      "datasource": { "type": "frser-sqlite-datasource", "uid": "P78F439AC9D5CFE20" },
-      "fieldConfig": { "defaults": { "unit": "humidity" } },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "P78F439AC9D5CFE20"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "humidity"
+        }
+      },
       "targets": [
         {
           "queryType": "table",
           "rawQueryText": "SELECT humidity AS value FROM measurements ORDER BY timestamp DESC LIMIT 1",
-          "datasource": { "type": "frser-sqlite-datasource", "uid": "P78F439AC9D5CFE20" }
+          "datasource": {
+            "type": "frser-sqlite-datasource",
+            "uid": "P78F439AC9D5CFE20"
+          }
         }
       ]
     },
@@ -70,15 +130,32 @@
       "id": 4,
       "type": "timeseries",
       "title": "CO₂ Verlauf (ppm)",
-      "gridPos": { "x": 0, "y": 4, "w": 24, "h": 8 },
-      "datasource": { "type": "frser-sqlite-datasource", "uid": "P78F439AC9D5CFE20" },
-      "fieldConfig": { "defaults": { "unit": "ppm" } },
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "P78F439AC9D5CFE20"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ppm"
+        }
+      },
       "targets": [
         {
           "queryType": "time series",
-          "timeColumns": ["time"],
+          "timeColumns": [
+            "time"
+          ],
           "rawQueryText": "SELECT CAST(strftime('%s', timestamp) AS INTEGER) AS time, co2_ppm AS \"CO2 ppm\" FROM measurements WHERE timestamp >= datetime('now', '-24 hours') ORDER BY timestamp",
-          "datasource": { "type": "frser-sqlite-datasource", "uid": "P78F439AC9D5CFE20" }
+          "datasource": {
+            "type": "frser-sqlite-datasource",
+            "uid": "P78F439AC9D5CFE20"
+          }
         }
       ]
     },
@@ -86,14 +163,219 @@
       "id": 5,
       "type": "timeseries",
       "title": "Temperatur & Luftfeuchte",
-      "gridPos": { "x": 0, "y": 12, "w": 24, "h": 8 },
-      "datasource": { "type": "frser-sqlite-datasource", "uid": "P78F439AC9D5CFE20" },
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "P78F439AC9D5CFE20"
+      },
       "targets": [
         {
           "queryType": "time series",
-          "timeColumns": ["time"],
+          "timeColumns": [
+            "time"
+          ],
           "rawQueryText": "SELECT CAST(strftime('%s', timestamp) AS INTEGER) AS time, temperature AS \"Temp °C\", humidity AS \"Luftfeuchte %\" FROM measurements WHERE timestamp >= datetime('now', '-24 hours') ORDER BY timestamp",
-          "datasource": { "type": "frser-sqlite-datasource", "uid": "P78F439AC9D5CFE20" }
+          "datasource": {
+            "type": "frser-sqlite-datasource",
+            "uid": "P78F439AC9D5CFE20"
+          }
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Personen im Raum",
+      "gridPos": {
+        "x": 18,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "P78F439AC9D5CFE20"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "queryType": "table",
+          "rawQueryText": "SELECT person_count AS value FROM room_occupancy ORDER BY timestamp DESC LIMIT 1",
+          "datasource": {
+            "type": "frser-sqlite-datasource",
+            "uid": "P78F439AC9D5CFE20"
+          }
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Raumbelegung (Personen)",
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 24,
+        "h": 7
+      },
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "P78F439AC9D5CFE20"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "stepAfter",
+            "fillOpacity": 20,
+            "lineWidth": 2
+          }
+        }
+      },
+      "targets": [
+        {
+          "queryType": "time series",
+          "timeColumns": [
+            "time"
+          ],
+          "rawQueryText": "SELECT CAST(strftime('%s', timestamp) AS INTEGER) AS time, person_count AS \"Personen\" FROM room_occupancy WHERE timestamp >= datetime('now','-24 hours') ORDER BY timestamp",
+          "datasource": {
+            "type": "frser-sqlite-datasource",
+            "uid": "P78F439AC9D5CFE20"
+          }
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "CO₂ vs. Raumbelegung",
+      "gridPos": {
+        "x": 0,
+        "y": 27,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "P78F439AC9D5CFE20"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "CO2 ppm"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "ppm"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "left"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Personen"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              },
+              {
+                "id": "custom.lineInterpolation",
+                "value": "stepAfter"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 25
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "time series",
+          "timeColumns": [
+            "time"
+          ],
+          "rawQueryText": "SELECT CAST(strftime('%s', timestamp) AS INTEGER) AS time, co2_ppm AS \"CO2 ppm\" FROM measurements WHERE timestamp >= datetime('now','-24 hours') ORDER BY timestamp",
+          "datasource": {
+            "type": "frser-sqlite-datasource",
+            "uid": "P78F439AC9D5CFE20"
+          }
+        },
+        {
+          "refId": "B",
+          "queryType": "time series",
+          "timeColumns": [
+            "time"
+          ],
+          "rawQueryText": "SELECT CAST(strftime('%s', timestamp) AS INTEGER) AS time, person_count AS \"Personen\" FROM room_occupancy WHERE timestamp >= datetime('now','-24 hours') ORDER BY timestamp",
+          "datasource": {
+            "type": "frser-sqlite-datasource",
+            "uid": "P78F439AC9D5CFE20"
+          }
         }
       ]
     }
