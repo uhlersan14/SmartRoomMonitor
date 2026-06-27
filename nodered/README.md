@@ -1,7 +1,15 @@
-# Node-RED Flow — CO₂ Alert
+# Node-RED Flow — CO₂ Alert (alternative Variante)
 
-Dieser Flow ist die vom Dozenten geforderte Automatisierungs-Komponente:
-Grenzwert-Check → RGB-LED steuern + E-Mail-Alert.
+> **Hinweis zum Projektstand:** Dieser Node-RED-Flow ist der **ursprünglich geplante**
+> Automatisierungs-Ansatz (Grenzwert-Check → RGB-LED + **E-Mail**-Alert). Im Lauf des Projekts
+> haben wir die Alarmierung bewusst durch eine **einfachere, robustere Telegram-Lösung** ersetzt,
+> die direkt in `sensor/collector.py` (Python) läuft — ohne zusätzliche Software und ohne
+> SMTP-Konfiguration.
+>
+> **Produktiv im Einsatz ist Telegram, nicht dieser Flow.** Wir lassen den Flow als
+> funktionsfähige, dokumentierte Alternative im Repository (Node-RED war vom Dozenten als
+> Beispiel-Abgabekomponente genannt). Die Begründung für den Wechsel steht im Projektbeschrieb
+> (Kapitel „Herausforderungen & Lessons Learned").
 
 ## Was der Flow macht
 
