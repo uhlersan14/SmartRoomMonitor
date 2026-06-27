@@ -18,6 +18,7 @@ Aufruf:
 """
 
 import argparse
+import glob
 import os
 import sqlite3
 import subprocess
@@ -48,17 +49,37 @@ def capture(path, width=640, height=480):
                    timeout=25)
 
 
+def cascade_dir():
+    """Findet das Haar-Cascade-Verzeichnis - robust ueber mehrere Pfade.
+
+    cv2.data existiert in der apt-Version von OpenCV (python3-opencv) nicht,
+    daher zusaetzlich die Standard-Systempfade durchsuchen.
+    """
+    candidates = []
+    data = getattr(cv2, "data", None)
+    if data is not None:
+        candidates.append(data.haarcascades)
+    candidates += sorted(glob.glob("/usr/share/opencv*/haarcascades/"))
+    candidates += ["/usr/share/opencv4/haarcascades/", "/usr/share/opencv/haarcascades/"]
+    for d in candidates:
+        if d and os.path.isfile(os.path.join(d, "haarcascade_frontalface_default.xml")):
+            return d
+    raise RuntimeError(
+        "Haar-Cascades nicht gefunden. Bitte ausfuehren: "
+        "sudo apt-get install -y opencv-data")
+
+
 def make_detector():
-    """Laedt die in OpenCV eingebauten Haar-Cascades (keine externen Downloads).
+    """Laedt die eingebauten Haar-Cascades (keine externen Downloads).
 
     - Gesicht (frontal): zuverlaessig fuer Personen, die zur Kamera schauen,
       auch nah und nur als Oberkoerper/Brustbild.
     - Oberkoerper: faengt Faelle ab, in denen das Gesicht schlecht sichtbar ist.
     """
-    base = cv2.data.haarcascades
+    base = cascade_dir()
     return {
-        "face": cv2.CascadeClassifier(base + "haarcascade_frontalface_default.xml"),
-        "upper": cv2.CascadeClassifier(base + "haarcascade_upperbody.xml"),
+        "face": cv2.CascadeClassifier(os.path.join(base, "haarcascade_frontalface_default.xml")),
+        "upper": cv2.CascadeClassifier(os.path.join(base, "haarcascade_upperbody.xml")),
     }
 
 

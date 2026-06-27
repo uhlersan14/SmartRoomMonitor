@@ -14,6 +14,8 @@ import sys
 
 import cv2
 
+from occupancy_counter import cascade_dir
+
 OUT = os.path.expanduser("~/occ_debug.jpg")
 
 
@@ -54,9 +56,10 @@ def main():
     else:
         print("  ✓ Helligkeit ok.")
 
-    base = cv2.data.haarcascades
-    face = cv2.CascadeClassifier(base + "haarcascade_frontalface_default.xml")
-    upper = cv2.CascadeClassifier(base + "haarcascade_upperbody.xml")
+    base = cascade_dir()
+    print(f"Cascade-Verzeichnis: {base}")
+    face = cv2.CascadeClassifier(os.path.join(base, "haarcascade_frontalface_default.xml"))
+    upper = cv2.CascadeClassifier(os.path.join(base, "haarcascade_upperbody.xml"))
     g = cv2.equalizeHist(gray)
     faces = face.detectMultiScale(g, 1.1, 5, minSize=(40, 40))
     ups = upper.detectMultiScale(g, 1.1, 3, minSize=(60, 60))
