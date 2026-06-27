@@ -29,7 +29,6 @@ import cv2
 
 DEFAULT_DB = os.path.expanduser("~/SmartRoomMonitor/smartroom.db")
 DEFAULT_INTERVAL = 60           # Sekunden zwischen zwei Aufnahmen
-MIN_WEIGHT = 0.6                # HOG-Konfidenzschwelle (schwache Treffer verwerfen)
 
 
 def log(msg):
@@ -50,28 +49,34 @@ def capture(path, width=640, height=480):
 
 
 def make_detector():
-    hog = cv2.HOGDescriptor()
-    hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
-    return hog
+    """Laedt die in OpenCV eingebauten Haar-Cascades (keine externen Downloads).
+
+    - Gesicht (frontal): zuverlaessig fuer Personen, die zur Kamera schauen,
+      auch nah und nur als Oberkoerper/Brustbild.
+    - Oberkoerper: faengt Faelle ab, in denen das Gesicht schlecht sichtbar ist.
+    """
+    base = cv2.data.haarcascades
+    return {
+        "face": cv2.CascadeClassifier(base + "haarcascade_frontalface_default.xml"),
+        "upper": cv2.CascadeClassifier(base + "haarcascade_upperbody.xml"),
+    }
 
 
-def count_people(hog, img):
-    """Zaehlt Personen im Bild via HOG + Non-Maximum-Suppression."""
-    rects, weights = hog.detectMultiScale(
-        img, winStride=(8, 8), padding=(8, 8), scale=1.05)
-    boxes, scores = [], []
-    for (x, y, w, h), wt in zip(rects, weights):
-        score = float(wt[0]) if hasattr(wt, "__len__") else float(wt)
-        if score < MIN_WEIGHT:
-            continue
-        boxes.append([int(x), int(y), int(w), int(h)])
-        scores.append(score)
-    if not boxes:
-        return 0
-    # Ueberlappende Boxen zusammenfassen, damit eine Person nicht doppelt zaehlt
-    idx = cv2.dnn.NMSBoxes(boxes, scores, score_threshold=MIN_WEIGHT,
-                           nms_threshold=0.4)
-    return len(idx) if len(idx) else 0
+def count_people(detectors, img):
+    """Zaehlt Personen ueber Gesichts- und Oberkoerper-Erkennung.
+
+    Ergebnis = das Maximum beider Detektoren (robust: schaut jemand zur Kamera,
+    greift die Gesichtserkennung; sonst der Oberkoerper).
+    """
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    gray = cv2.equalizeHist(gray)  # Kontrastausgleich -> stabiler bei wenig Licht
+
+    faces = detectors["face"].detectMultiScale(
+        gray, scaleFactor=1.1, minNeighbors=5, minSize=(40, 40))
+    upper = detectors["upper"].detectMultiScale(
+        gray, scaleFactor=1.1, minNeighbors=3, minSize=(60, 60))
+
+    return int(max(len(faces), len(upper)))
 
 
 def write_count(db, count):
@@ -84,7 +89,7 @@ def write_count(db, count):
         con.close()
 
 
-def one_cycle(hog, db):
+def one_cycle(detectors, db):
     tmp = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
     tmp.close()
     try:
@@ -93,7 +98,7 @@ def one_cycle(hog, db):
         if img is None:
             log("WARN: Bild konnte nicht gelesen werden - ueberspringe Zyklus")
             return
-        count = count_people(hog, img)
+        count = count_people(detectors, img)
         write_count(db, count)
         log(f"Personen erkannt: {count} -> in DB geschrieben")
     finally:
@@ -117,16 +122,16 @@ def main():
         log(f"FEHLER: DB nicht gefunden: {args.db}")
         sys.exit(1)
 
-    hog = make_detector()
+    detectors = make_detector()
     log(f"Occupancy-Counter gestartet (DB={args.db}, Intervall={args.interval}s)")
 
     if args.once:
-        one_cycle(hog, args.db)
+        one_cycle(detectors, args.db)
         return
 
     while True:
         try:
-            one_cycle(hog, args.db)
+            one_cycle(detectors, args.db)
         except subprocess.TimeoutExpired:
             log("WARN: Kamera-Timeout - ueberspringe Zyklus")
         except Exception as e:  # robust: ein Fehler darf den Dienst nicht killen
