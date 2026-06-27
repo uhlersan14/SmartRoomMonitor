@@ -30,6 +30,7 @@ import cv2
 
 DEFAULT_DB = os.path.expanduser("~/SmartRoomMonitor/smartroom.db")
 DEFAULT_INTERVAL = 60           # Sekunden zwischen zwei Aufnahmen
+ROTATE_180 = True               # Kamera ist um 180 Grad gedreht montiert
 
 
 def log(msg):
@@ -119,6 +120,8 @@ def one_cycle(detectors, db):
         if img is None:
             log("WARN: Bild konnte nicht gelesen werden - ueberspringe Zyklus")
             return
+        if ROTATE_180:
+            img = cv2.rotate(img, cv2.ROTATE_180)
         count = count_people(detectors, img)
         write_count(db, count)
         log(f"Personen erkannt: {count} -> in DB geschrieben")

@@ -14,7 +14,7 @@ import sys
 
 import cv2
 
-from occupancy_counter import cascade_dir
+from occupancy_counter import cascade_dir, ROTATE_180
 
 OUT = os.path.expanduser("~/occ_debug.jpg")
 
@@ -43,6 +43,9 @@ def main():
     if img is None:
         print("=> Bild konnte nicht gelesen werden (Datei leer?).")
         sys.exit(1)
+    if ROTATE_180:
+        img = cv2.rotate(img, cv2.ROTATE_180)
+        print("  (Bild um 180 Grad gedreht - Kamera kopfueber montiert)")
 
     h, w = img.shape[:2]
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
